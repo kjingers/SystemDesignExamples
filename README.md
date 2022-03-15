@@ -192,6 +192,72 @@ We can have a standalone Key Generation Service (KGS) that generates random six-
 
 **Should we impose size limits on custom aliases?** Our service supports custom aliases. Users can pick any ‘key’ they like, but providing a custom alias is not mandatory. However, it is reasonable (and often desirable) to impose a size limit on a custom alias to ensure we have a consistent URL database. Let’s assume users can specify a maximum of 16 characters per customer key (as reflected in the above database schema).
 
+![image](https://user-images.githubusercontent.com/13190696/158423154-3833663c-1470-4f14-8704-8bd999220f7b.png)
+
+## Data Partitioning and Replication
+
+### a. Range Based Partitioning
+We can store URLs in separate partitions based on the hash key’s first letter.
+* Main Problem is we can end up with unbalanced partitions
+
+### b. Hash Based Partitioning
+In this scheme, we take a hash of the object we are storing. We then calculate which partition to use based upon the hash.
+* Our hashing function will randomly distribute URLs into different partitions (e.g., our hashing function can always map any ‘key’ to a number between [1…256]).
+* Problem is we can still have unbalanced partitions, but consistent hasing can solve this problem.
+
+## Cache
+
+We can cache URLs that are frequently accessed. We can use any off-the-shelf solution like Memcached, which can store full URLs with their respective hashes. Thus, the application servers, before hitting the backend storage, can quickly check if the cache has the desired URL.
+
+**How Much Cache Memory should we have?**
+* We can start with 20% of daily traffic and, based on clients’ usage patterns, we can adjust how many cache servers we need.
+* As estimated above, we need 200GB of memory to cache 20% of daily traffic.
+* . Since a modern-day server can have 256GB of memory, we can easily fit all the cache into one machine. Alternatively, we can use a couple of smaller servers to store all these hot URLs.
+
+**Which cache eviction policy would best fit our needs?**
+Least Recently Used (LRU) can be a reasonable policy for our system. Under this policy, we discard the least recently used URL first. 
+
+![image](https://user-images.githubusercontent.com/13190696/158428236-21cf40ba-e863-48c6-85c4-99e7b9a1b6ba.png)
+
+## Load Balancer
+We can add a Load balancing layer at three places in our system:
+1. Between Clients and Application servers
+2. Between Application Servers and database servers
+3. Between Application Servers and Cache servers
+
+* Can Initially use Round Robin since it's simple to setup. But since it does not factor in server load, we can switch to a more intelligent LB solution.
+
+## Purging or DB Cleanup
+We can slowly remove expired links and do a lazy cleanup. Our service will ensure that only expired links will be deleted, although some expired links can live longer but will never be returned to users.
+* Check expiration on read
+* Lightweight cleanup service that runs when activity is low
+* After removing, can put back into key-DB to be reused
+
+![image](https://user-images.githubusercontent.com/13190696/158429604-441fa247-0391-49b2-8800-022caf7f6233.png)
+
+## Telemetry / Statistics
+How many times a short URL has been used, what were user locations, etc.? How would we store these statistics? If it is part of a DB row that gets updated on each view, what will happen when a popular URL is slammed with a large number of concurrent requests?
+
+Some statistics worth tracking: country of the visitor, date and time of access, web page that referred the click, browser, or platform from where the page was accessed.
+
+## Security and Permissions
+Given that we are storing our data in a NoSQL wide-column database like Cassandra, the key for the table storing permissions would be the ‘Hash’ (or the KGS generated ‘key’). The columns will store the UserIDs of those users that have permission to see the URL.
+
+# Designing Pastebin
+
+## Requirements and Goals
+
+**Functional Requirements:**
+1. Users should be able to upload or “paste” their data and get a unique URL to access it.
+2. Users will only be able to upload text.
+3. Data and links will expire after a specific timespan automatically; users should also be able to specify expiration time.
+4. Users should optionally be able to pick a custom alias for their paste.
+
+**Non-Functional Requirements:**
+1. The system should be highly reliable, any data uploaded should not be lost.
+2. The system should be highly available. This is required because if our service is down, users will not be able to access their Pastes.
+3. Users should be able to access their Pastes in real-time with minimum latency.
+4. Paste links should not be guessable (not predictable).
 
 
 
