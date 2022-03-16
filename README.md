@@ -317,6 +317,21 @@ A few observations about the nature of the data we are storing:
 4. There are no relationships between records, except if we want to store which user created what Paste.
 5. Our service is read-heavy.
 
+![image](https://user-images.githubusercontent.com/13190696/158647150-601e2b58-d460-45a9-896e-955846e5c48a.png)
+
+Here, ‘URlHash’ is the URL equivalent of the TinyURL, and ‘ContentKey’ is a reference to an external object storing the contents of the paste; we’ll discuss the external storage of the paste contents later in the chapter.
+
+## High Level Design
+
+Can have two seperate storage:
+* One for metadata
+* One for pastes in object storage like Amazon S3
+
+![image](https://user-images.githubusercontent.com/13190696/158649868-8d2074ea-8176-4bb3-93fc-a67763f2b750.png)
+
+## Component Design
+
+
 
 
 
