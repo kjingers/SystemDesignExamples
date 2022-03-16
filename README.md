@@ -259,6 +259,64 @@ Given that we are storing our data in a NoSQL wide-column database like Cassandr
 3. Users should be able to access their Pastes in real-time with minimum latency.
 4. Paste links should not be guessable (not predictable).
 
+**Extended Requirements:**
+1. Analytics, e.g., how many times a paste was accessed?
+2. Our service should also be accessible through REST APIs by other services.
+
+## Capacity Estimations and Constraints
+* 5:1 Read-write ratio
+
+**Traffic Estimates**:
+* Assume 1 million new pastes per day
+* QPS (write) = (1M) / (24 * 3600) = ~12 pastes / sec
+* QPS (read) = 12 * 5 = 60 reads / sec
+
+**Storage Estimates:**
+* Assume 10kB average
+* 10k * (1M) = 10 GB / day
+* 10k * 1M * 365 * 10 = 36 TB to store for 10 years
+* 3.6 Billion pastes in 10 years
+* If base64 encoding, then would need 6 characters (64 ^ 6 = 68.7 billion strings)
+* 1 byte per character, so 3.6 Bill * 6 bytes = ~22 GB to store keys
+* Assume 70% capacity model (we don't want to use more than 70% of our capacity). Raises storage req 36TB -> 51 TB
+
+**Bandwidth Estimates:**
+* Write: 10kB * 12 = 120KB / sec
+* Read: 120kB * 5 = 0.6MB
+
+**Memory Estimates:**
+Can cache hot pastes. Following 80-20 rule:
+* 0.2 * 5M * 10kB = 10 GB
+
+## System APIs
+
+`addPaste(api_dev_key, paste_data, custom_url=None user_name=None, paste_name=None, expire_date=None)`
+Parameters:
+* api_dev_key (string): The API developer key of a registered account. This will be used to, among other things, throttle users based on their allocated quota.
+* paste_data (string): Textual data of the paste.
+* custom_url (string): Optional custom URL.
+* user_name (string): Optional user name to be used to generate URL.
+* paste_name (string): Optional name of the paste
+* expire_date (string): Optional expiration date for the paste.
+
+Returns: URL string if success
+
+`getPaste(api_dev_key, api_paste_key)`
+Returns string text of data
+
+`deletePaste(api_dev_key, api_paste_key)`
+Returns True is successsful
+
+## Database Design
+
+A few observations about the nature of the data we are storing:
+
+1. We need to store billions of records.
+2. Each metadata object we are storing would be small (less than 1KB).
+3. Each paste object we are storing can be of medium size (it can be a few MB).
+4. There are no relationships between records, except if we want to store which user created what Paste.
+5. Our service is read-heavy.
+
 
 
 
