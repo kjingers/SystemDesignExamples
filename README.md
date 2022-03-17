@@ -331,7 +331,16 @@ Can have two seperate storage:
 
 ## Component Design
 
+### a. Application Layer
+* Option 1: Generate key based on hash. Problem is that it could be a duplicate key. So, we should keep trying until we get a uniue key. If they provide a custom key and it already exists, then return an error
+* Option 2: Key Generation Service. Two databases - One for unused keys, one for used keys. 
 
+### b. Datastore Layer
 
+1. Metadata database: We can use a relational database like MySQL or a Distributed Key-Value store like Dynamo or Cassandra.
+2. Object storage: We can store our contents in an Object Storage like Amazon’s S3. Whenever we feel like hitting our full capacity on content storage, we can easily increase it by adding more servers.
 
+![image](https://user-images.githubusercontent.com/13190696/158864353-ebd418b8-8468-4359-b871-90a17d44cf70.png)
+
+# Design Instagram
 
