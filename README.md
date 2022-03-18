@@ -417,6 +417,24 @@ This is a relationship between follower (4 byts) and followee (4 bytes)
 
 ## Component Design
 
+Since uploading photos writes to disk, they are slow. They can take up all connections on websevers, blocking reads. So, we can seperate a read service and a write service.
+
+![image](https://user-images.githubusercontent.com/13190696/159047661-88f4a9a2-59d0-41b4-976e-5df451dbdd28.png)
+
+## Reliability and Redundancy
+
+Since losing data is not an options, we can use replicas for all data. Also, we can have backup services, so that if one goes down, the system can failover to to the healthy one.
+
+![image](https://user-images.githubusercontent.com/13190696/159048593-fdc7f0d7-f606-4623-8b63-2bbf2998d252.png)
+
+## Data Sharding
+
+### a. Partitioning based on UserID
+
+
+
+
+
 
 
 
