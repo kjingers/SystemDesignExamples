@@ -343,4 +343,80 @@ Can have two seperate storage:
 ![image](https://user-images.githubusercontent.com/13190696/158864353-ebd418b8-8468-4359-b871-90a17d44cf70.png)
 
 # Design Instagram
+We plan to design a simpler version of Instagram for this design problem, where a user can share photos and follow other users. The ‘News Feed’ for each user will consist of top photos of all the people the user follows.
+
+## Requirements and Goals of the System
+
+The system would be read-heavy, so we will focus on building a system that can retrieve photos quickly.
+
+**Functional Requirements:**
+1. Users should be able to upload/download/view photos.
+2. Users can perform searches based on photo/video titles.
+3. Users can follow other users.
+4. The system should generate and display a user’s News Feed consisting of top photos from all the people the user follows.
+
+**Non-functional Requirements:**
+1. Our service needs to be highly available.
+2. The acceptable latency of the system is 200ms for News Feed generation.
+3. Consistency can take a hit (in the interest of availability) if a user doesn’t see a photo for a while; it should be fine.
+4. The system should be highly reliable; any uploaded photo or video should never be lost.
+
+**Not in scope:** Adding tags to photos, searching photos on tags, commenting on photos, tagging users to photos, who to follow, etc.
+
+## Capacity Estimation and Contraints
+
+* Assume we have 500M total users, with 1M daily active users.
+* Assume 2M new photos every day
+* 2M / 24 / 3600 = 2000000 / 10000 = ~23 new Photos / second
+* Average Photo Size = 200KB
+* Total Space for 1 day: 200KB * 2M = 400GB
+* Total Space for 10 years: 400GB * 365 * 10 = 160000GB * 10 = 1600000GB = 1600TB
+
+## High Level Design
+At high level, Two Scenerios:
+1. Upload Photos
+2. Read Photos
+
+Need Object Storage for photos. and database storage for metadata
+
+![image](https://user-images.githubusercontent.com/13190696/159043949-d53c65db-c9b7-4b2c-b540-9e28deb26b22.png)
+
+## Database Schema
+
+NOTE: Defining DB Schema in early stages of interview helps understand dataflow and later guide toward partitioning 
+
+We need to store data about users, their uploaded photos, and the people they follow. 
+
+The Photo table will store all data related to a photo; we need to have an index on (PhotoID, CreationDate) since we need to fetch recent photos first.
+
+![image](https://user-images.githubusercontent.com/13190696/159044567-d5b02e6c-0dd0-4512-8d29-4f27334491d6.png)
+
+* A straightforward approach for storing the above schema would be to use an RDBMS like MySQL since we require joins. But relational databases come with their challenges, especially when we need to scale them.
+* We can store photos in a distributed file storage like HDFS or S3.
+* We can store the above schema in a distributed key-value store to enjoy the benefits offered by NoSQL.
+* NoSQL stores, in general, always maintain a certain number of replicas to offer reliability. Also, in such data stores, deletes don’t get applied instantly; data is retained for certain days (to support undeleting) before getting removed from the system permanently.
+
+## Data Size Estimation
+
+**Users**:
+UserID (4 bytes) + Name (20 bytes) + Email (32 bytes) + DateOfBirth (4 bytes) + CreationDate (4 bytes) + LastLogin (4 bytes) = 68 bytes
+
+* 500M users * 68 = 250M * 100 = ~32GB
+
+**Photo**
+PhotoID (4 bytes) + UserID (4 bytes) + PhotoPath (256 bytes) + PhotoLatitude (4 bytes) + PhotoLongitude(4 bytes) + UserLatitude (4 bytes) + UserLongitude (4 bytes) + CreationDate (4 bytes) = 284 bytes
+* Per day = 2M * 284 = 500M = 0.5 GB
+* 10 years = 0.5 * 365 * 10 = 2.5 * 1000 = 2.5TB (~1.88TB)
+
+**User Follow**
+This is a relationship between follower (4 byts) and followee (4 bytes)
+* 500M * 500 * 8 = 2500000M = ~2 TB (1.82TB)
+
+**Total for all Tables for 10 years**
+32GB + 1.88TB + 1.82TB = 3.7TB
+
+## Component Design
+
+
+
 
