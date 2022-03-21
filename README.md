@@ -431,6 +431,28 @@ Since losing data is not an options, we can use replicas for all data. Also, we 
 
 ### a. Partitioning based on UserID
 
+*  If one DB shard is 1TB, we will need four shards to store 3.7TB of data. Let’s assume, for better performance and scalability, we keep 10 shards.
+*  So we’ll find the shard number by UserID % 10 and then store the data there. To uniquely identify any photo in our system, we can append the shard number with each PhotoID.
+*  Generate Photo-IDs with auto-increment on each DB shard. Since we append the shard #, the photoID will be unique.
+### b. Based on PhotoID
+* Generate unqiue PhotoIDs and assign to shard by PhotoID % 10
+* To generate, can dedicate a dastabase with auto-increment to assign IDs
+* To avoid single point of failure, can have multiple databases: ie 2 databases that increment by 2 with different offsets
+* Can also use key generation service
+
+To allow for future growth, we can start off with multiple logical partitions on each database, since each DB server can run multiple DB instances. As the partitions grow, we can move partitions to seperate database servers.  We can maintain a config file (or a separate database) that can map our logical partitions to database servers; this will enable us to move partitions around easily. Whenever we want to move a partition, we only have to update the config file to announce the change.
+
+## Ranking and News Feed Generation
+
+### Pre Generating NEws Feed Table
+* We can have dedicated servers that are continuously generating users’ News Feeds and storing them in a ‘UserNewsFeed’ table.
+* When users need latest photos, they query this table and check last time it was updated. THen, can use table results + photos after this time
+
+### Approaches for sending News Feed to users
+* Pull: One problem is that many responses will return nothing since nothing will have changed. Also, updates will not be seen until time interval has passed or manual request
+* Push: Server can push new data as soon as available. Users will need to establish Long Poll request with server.
+* Hybrid: Celebritys use Pull-based approach (so that update isn't pushed to millions of people. Others with ~thousands can get pushed to all their followers
+
 
 
 
